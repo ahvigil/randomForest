@@ -139,7 +139,9 @@ mylevels <- function(x) if (is.factor(x)) levels(x) else 0
         importance <- TRUE
         impmat <- matrix(0, p, n)
     } else impmat <- double(1)
-
+    
+    # if calculating importance, create matrix of VI metrics
+    # otherwise, use an array to store decrease gini during tree construction
     if (importance) {
         if (nPerm < 1) nPerm <- as.integer(1) else nPerm <- as.integer(nPerm)
         if (classRF) {
@@ -207,48 +209,48 @@ mylevels <- function(x) if (is.factor(x)) levels(x) else 0
     }
     nt <- if (keep.forest) ntree else 1
 
-    if (classRF) {
+if (classRF) {  # random forest for classification
         cwt <- classwt
         threshold <- cutoff
         error.test <- if (labelts) double((nclass+1) * ntree) else double(1)
         rfout <- .C("classRF",
-                    x = x,
-                    xdim = as.integer(c(p, n)),
-                    y = as.integer(y),
-                    nclass = as.integer(nclass),
+                    x = x,  # variables to be used as predictors
+                    xdim = as.integer(c(p, n)), # p is number of features, n is number of observations
+                    y = as.integer(y),  # response variable (to be predicted)
+                    nclass = as.integer(nclass),    # number of classes in response (classification problem)
                     ncat = as.integer(ncat),
-                    maxcat = as.integer(maxcat),
+                    maxcat = as.integer(maxcat),    # highest number of categories for categorical predictors
                     sampsize = as.integer(sampsize),
                     strata = if (Stratify) as.integer(strata) else integer(1),
                     Options = as.integer(c(addclass,
-                    importance,
+                    importance, j   # should importance be calculated
                     localImp,
-                    proximity,
+                    proximity,      # should proximity be calculated
                     oob.prox,
-                    do.trace,
-                    keep.forest,
+                    do.trace,       # should OOB error be printed every n trees
+                    keep.forest,    # should generated forests be kept
                     replace,
                     Stratify,
-                    keep.inbag)),
-                    ntree = as.integer(ntree),
-                    mtry = as.integer(mtry),
+                    keep.inbag)),   # should in-bag observations for each tree be kept
+                    ntree = as.integer(ntree),  # number of trees in a forest
+                    mtry = as.integer(mtry),    # number of variables to consider at each node
                     ipi = as.integer(ipi),
                     classwt = as.double(cwt),
-                    cutoff = as.double(threshold),
+                    cutoff = as.double(threshold),  # cutoff threshold for voting a category
                     nodesize = as.integer(nodesize),
                     outcl = integer(nsample),
                     counttr = integer(nclass * nsample),
-                    prox = prox,
-                    impout = impout,
-                    impSD = impSD,
+                    prox = prox,    # matrix of proximities
+                    impout = impout,    # matrix of importance measures
+                    impSD = impSD,      # matrix of importance standard deviations
                     impmat = impmat,
                     nrnodes = as.integer(nrnodes),
-                    ndbigtree = integer(ntree),
-                    nodestatus = integer(nt * nrnodes),
-                    bestvar = integer(nt * nrnodes),
-                    treemap = integer(nt * 2 * nrnodes),
-                    nodepred = integer(nt * nrnodes),
-                    xbestsplit = double(nt * nrnodes),
+                    ndbigtree = integer(ntree),     # number of nodes in each tree
+                    nodestatus = integer(nt * nrnodes), # status of nodes in each tree (marks leaf nodes)
+                    bestvar = integer(nt * nrnodes),    # variable used to split at each node
+                    treemap = integer(nt * 2 * nrnodes),    # map of trees in forest
+                    nodepred = integer(nt * nrnodes),   # class to vote for (for leaf nodes)
+                    xbestsplit = double(nt * nrnodes),  # value to use as split threshold
                     errtr = double((nclass+1) * ntree),
                     testdat = as.integer(testdat),
                     xts = as.double(xtest),
@@ -259,7 +261,7 @@ mylevels <- function(x) if (is.factor(x)) levels(x) else 0
                     labelts = as.integer(labelts),
                     proxts = proxts,
                     errts = error.test,
-                    inbag = if (keep.inbag)
+                    inbag = if (keep.inbag)         # matrix of in-bag observations
                     matrix(integer(n * ntree), n) else integer(n),
                     DUP=FALSE,
                     PACKAGE="randomForest")[-1]
@@ -359,7 +361,7 @@ mylevels <- function(x) if (is.factor(x)) levels(x) else 0
                     dimnames = list(xts.row.names, c(xts.row.names,
                     x.row.names))) else NULL),
                     inbag = if (keep.inbag) rfout$inbag else NULL)
-    } else {
+    } else {    # random forest for regression
 		ymean <- mean(y)
 		y <- y - ymean
 		ytest <- ytest - ymean

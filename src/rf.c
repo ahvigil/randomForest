@@ -539,7 +539,9 @@ void classRF(double *x, int *dimx, int *cl, int *ncl, int *cat, int *maxcat,
     }
 }
 
-
+/*
+use a random forest to perform classification
+*/
 void classForest(int *mdim, int *ntest, int *nclass, int *maxcat,
                  int *nrnodes, int *ntree, double *x, double *xbestsplit,
                  double *pid, double *cutoff, double *countts, int *treemap,
